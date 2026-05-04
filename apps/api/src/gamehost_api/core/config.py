@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     refresh_token_days: int = 30
     refresh_cookie_name: str = "refresh_token"
     frontend_origin: str = "https://gamehost.localhost"
+    log_tail_limit: int = 500
 
 
 def get_settings() -> Settings:

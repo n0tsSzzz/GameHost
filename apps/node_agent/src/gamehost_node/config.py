@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="GAMEHOST_", env_file=".env", extra="ignore")
 
     node_agent_api_key: str = Field(default="dev-node-agent-key", min_length=8)
+    redis_url: str = "redis://localhost:6379/0"
 
 
 def get_settings() -> Settings:

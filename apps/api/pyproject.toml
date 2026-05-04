@@ -17,6 +17,7 @@ dependencies = [
   "python-jose[cryptography]>=3.5,<4",
   "redis>=5.0,<6",
   "sqlalchemy>=2.0,<3",
+  "sse-starlette>=3.0,<4",
   "structlog>=25.4,<26",
   "uuid6>=2025.0,<2027",
   "uvicorn[standard]>=0.38,<1",

@@ -1,9 +1,11 @@
 from collections.abc import AsyncIterator
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Response, status
 from sse_starlette.sse import EventSourceResponse
 
 from gamehost_node.deps import DockerOpsDep
+from gamehost_node.logs import LogPublisher, get_log_publisher
 from gamehost_node.schemas import ContainerCreateRequest, ContainerResponse, ExecRequest
 from gamehost_node.security import require_api_key
 
@@ -55,9 +57,14 @@ async def inspect_container(container_id: str, docker_ops: DockerOpsDep) -> Cont
 
 
 @protected_router.get("/containers/{container_id}/logs/stream")
-async def stream_container_logs(container_id: str, docker_ops: DockerOpsDep) -> EventSourceResponse:
+async def stream_container_logs(
+    container_id: str,
+    docker_ops: DockerOpsDep,
+    log_publisher: Annotated[LogPublisher, Depends(get_log_publisher)],
+) -> EventSourceResponse:
     async def events() -> AsyncIterator[dict[str, str]]:
         async for line in docker_ops.stream_logs(container_id):
+            await log_publisher.publish(container_id, line)
             yield {"event": "log", "data": line}
 
     return EventSourceResponse(events())

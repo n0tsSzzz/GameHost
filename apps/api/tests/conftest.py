@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
 
 import pytest
+from fastapi import FastAPI
 from gamehost_api.db.base import Base, get_session
 from gamehost_api.main import create_app
 from httpx import ASGITransport, AsyncClient
@@ -29,13 +30,17 @@ def session_factory(test_engine: AsyncEngine) -> SessionFactory:
 
 
 @pytest.fixture
-async def api_client(session_factory: SessionFactory) -> AsyncIterator[AsyncClient]:
+def app(session_factory: SessionFactory) -> FastAPI:
     async def override_session() -> AsyncIterator[AsyncSession]:
         async with session_factory() as session:
             yield session
 
     app = create_app()
     app.dependency_overrides[get_session] = override_session
+    return app
 
+
+@pytest.fixture
+async def api_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="https://test") as client:
         yield client

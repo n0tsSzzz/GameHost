@@ -7,6 +7,7 @@ dependencies = [
   "docker>=7.1,<8",
   "fastapi>=0.121,<1",
   "pydantic-settings>=2.11,<3",
+  "redis>=5.0,<6",
   "sse-starlette>=3.0,<4",
   "structlog>=25.4,<26",
   "uvicorn[standard]>=0.38,<1",

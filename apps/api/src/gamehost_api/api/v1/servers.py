@@ -1,10 +1,13 @@
+from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from gamehost_shared.enums import TaskKind
 from sqlalchemy.ext.asyncio import AsyncSession
+from sse_starlette.sse import EventSourceResponse
 
+from gamehost_api.clients.logs import LogsClientProtocol, get_logs_client
 from gamehost_api.core.deps import CurrentUser
 from gamehost_api.db.base import get_session
 from gamehost_api.db.models import Server, Task, User
@@ -26,6 +29,7 @@ from gamehost_api.schemas.servers import (
 )
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
+LogsClientDep = Annotated[LogsClientProtocol, Depends(get_logs_client)]
 
 router = APIRouter(prefix="/servers", tags=["servers"])
 
@@ -87,6 +91,39 @@ async def patch_server(
             status_code=status.HTTP_409_CONFLICT,
             detail="Server must be stopped before updating config",
         ) from exc
+
+
+@router.get("/{server_id}/logs")
+async def get_server_logs(
+    server_id: UUID,
+    session: SessionDep,
+    user: CurrentUser,
+    logs_client: LogsClientDep,
+    tail: Annotated[int, Query(ge=1, le=1000)] = 200,
+) -> dict[str, list[str]]:
+    server = await _get_server_or_404(session, user, server_id)
+    if server.container_id is None:
+        return {"lines": []}
+    return {"lines": await logs_client.tail(server.container_id, tail)}
+
+
+@router.get("/{server_id}/logs/stream")
+async def stream_server_logs(
+    server_id: UUID,
+    session: SessionDep,
+    user: CurrentUser,
+    logs_client: LogsClientDep,
+) -> EventSourceResponse:
+    server = await _get_server_or_404(session, user, server_id)
+    if server.container_id is None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Server has no container")
+    container_id = server.container_id
+
+    async def events() -> AsyncIterator[dict[str, str]]:
+        async for line in logs_client.stream(container_id):
+            yield {"event": "log", "data": line}
+
+    return EventSourceResponse(events())
 
 
 @router.post(
@@ -169,3 +206,13 @@ async def _enqueue(
 
 def _accepted(task: Task, server_id: UUID | None) -> TaskAcceptedResponse:
     return TaskAcceptedResponse(task_id=task.id, server_id=server_id, status=task.status)
+
+
+async def _get_server_or_404(session: AsyncSession, user: User, server_id: UUID) -> Server:
+    try:
+        return await get_accessible_server(session, user, server_id)
+    except ServerNotFound as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Server not found",
+        ) from exc
