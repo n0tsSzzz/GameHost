@@ -1,0 +1,20 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.3
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: trailing-whitespace
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: uv run mypy apps/api/src apps/worker/src apps/node_agent/src packages/shared/src
+        language: system
+        pass_filenames: false

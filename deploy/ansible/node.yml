@@ -1,0 +1,5 @@
+- name: Provision GameHost node-agent
+  hosts: gamehost_nodes
+  become: true
+  roles:
+    - node-agent

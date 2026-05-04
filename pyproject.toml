@@ -1,0 +1,66 @@
+[project]
+name = "gamehost"
+version = "0.1.0"
+description = "GameHost monorepo workspace"
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+  "apps/api",
+  "apps/worker",
+  "apps/node_agent",
+  "packages/shared",
+]
+
+[tool.uv.sources]
+gamehost-shared = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "mypy>=1.18,<2",
+  "pre-commit>=4.0,<5",
+  "pytest>=8.0,<9",
+  "pytest-asyncio>=1.0,<2",
+  "ruff>=0.14,<1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "RUF"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+pretty = true
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = [
+  "apps/api/src",
+  "apps/worker/src",
+  "apps/node_agent/src",
+  "packages/shared/src",
+]
+
+[[tool.mypy.overrides]]
+module = ["docker.*", "jose.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = ["--import-mode=importlib"]
+testpaths = [
+  "apps/api/tests",
+  "apps/worker/tests",
+  "apps/node_agent/tests",
+  "packages/shared/tests",
+]
