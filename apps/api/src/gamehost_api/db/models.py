@@ -151,6 +151,28 @@ class ServerMember(Base):
     created_at: Mapped[CreatedAt]
 
 
+class ServerInvite(Base):
+    __tablename__ = "server_invites"
+
+    id: Mapped[UuidPk]
+    server_id: Mapped[UUID] = mapped_column(
+        ForeignKey("servers.id", ondelete="CASCADE"),
+        index=True,
+    )
+    email: Mapped[str] = mapped_column(String(320), index=True)
+    role: Mapped[ServerMemberRole] = mapped_column(
+        SqlEnum(
+            ServerMemberRole,
+            name="server_member_role",
+            values_callable=lambda item: [role.value for role in item],
+        ),
+    )
+    token: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    invited_by: Mapped[UUID] = mapped_column(ForeignKey("users.id"))
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    created_at: Mapped[CreatedAt]
+
+
 class Task(Base):
     __tablename__ = "tasks"
 

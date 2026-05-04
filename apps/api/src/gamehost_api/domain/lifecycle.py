@@ -3,6 +3,7 @@ from uuid import UUID
 
 from gamehost_api.clients.node_agent import NodeAgentClientProtocol
 from gamehost_api.db.models import AuditLog, GameTemplate, Node, Server, ServerMember, Task, User
+from gamehost_api.domain.members import has_operator_access
 from gamehost_api.schemas.servers import ServerCreate, ServerUpdate
 from gamehost_shared.enums import (
     NodeStatus,
@@ -96,6 +97,8 @@ async def update_server_config(
     ip: str | None,
 ) -> Server:
     server = await get_accessible_server(session, user, server_id)
+    if not await has_operator_access(session, user, server):
+        raise InvalidServerState
     if server.status != ServerStatus.STOPPED:
         raise InvalidServerState
     updates = payload.model_dump(exclude_unset=True)
@@ -115,6 +118,8 @@ async def enqueue_lifecycle_task(
     ip: str | None,
 ) -> Task:
     server = await get_accessible_server(session, user, server_id)
+    if not await has_operator_access(session, user, server):
+        raise InvalidServerState
     _validate_transition(server, kind)
     if kind == TaskKind.DELETE_SERVER:
         server.status = ServerStatus.DELETING
