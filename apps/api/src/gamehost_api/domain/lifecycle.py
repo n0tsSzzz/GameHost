@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
+from time import perf_counter
 from uuid import UUID
 
 from gamehost_api.clients.node_agent import NodeAgentClientProtocol
+from gamehost_api.core.metrics import ARQ_JOBS_FAILED, TASK_DURATION
 from gamehost_api.db.models import (
     AuditLog,
     Backup,
@@ -162,6 +164,7 @@ async def run_task(
     task_id: UUID,
     node_agent: NodeAgentClientProtocol,
 ) -> Task:
+    started = perf_counter()
     task = await session.get(Task, task_id)
     if task is None:
         raise ServerNotFound
@@ -177,6 +180,7 @@ async def run_task(
             await _run_lifecycle(session, task, node_agent)
         task.status = TaskStatus.SUCCEEDED
     except Exception as exc:
+        ARQ_JOBS_FAILED.inc()
         task.status = TaskStatus.FAILED
         task.error = str(exc)
         server = await session.get(Server, task.server_id) if task.server_id else None
@@ -184,6 +188,7 @@ async def run_task(
             server.status = ServerStatus.FAILED
     finally:
         task.finished_at = datetime.now(UTC)
+        TASK_DURATION.labels(kind=task.kind.value).observe(perf_counter() - started)
         await session.commit()
         await session.refresh(task)
     return task

@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from gamehost_api.api.v1.audit import router as audit_router
 from gamehost_api.api.v1.auth import router as auth_router
 from gamehost_api.api.v1.backups import router as backups_router
 from gamehost_api.api.v1.members import router as members_router
@@ -9,6 +10,7 @@ from gamehost_api.api.v1.tasks import router as tasks_router
 from gamehost_api.api.v1.templates import router as templates_router
 
 router = APIRouter()
+router.include_router(audit_router)
 router.include_router(auth_router)
 router.include_router(backups_router)
 router.include_router(members_router)

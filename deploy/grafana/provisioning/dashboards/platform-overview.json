@@ -1,0 +1,26 @@
+{
+  "uid": "gamehost-platform-overview",
+  "title": "Platform overview",
+  "schemaVersion": 39,
+  "version": 1,
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Servers by status",
+      "targets": [{ "expr": "gh_servers_total", "refId": "A" }],
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "timeseries",
+      "title": "Task duration",
+      "targets": [{ "expr": "rate(gh_task_duration_seconds_sum[5m])", "refId": "A" }],
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+    },
+    {
+      "type": "stat",
+      "title": "Failed jobs",
+      "targets": [{ "expr": "gh_arq_jobs_failed_total", "refId": "A" }],
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 6 }
+    }
+  ]
+}
