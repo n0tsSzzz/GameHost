@@ -555,6 +555,7 @@ version = "0.1.0"
 source = { editable = "apps/worker" }
 dependencies = [
     { name = "arq" },
+    { name = "gamehost-api" },
     { name = "gamehost-shared" },
     { name = "httpx" },
     { name = "pydantic-settings" },
@@ -565,6 +566,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "arq", specifier = ">=0.26,<1" },
+    { name = "gamehost-api", editable = "apps/api" },
     { name = "gamehost-shared", editable = "packages/shared" },
     { name = "httpx", specifier = ">=0.28,<1" },
     { name = "pydantic-settings", specifier = ">=2.11,<3" },

@@ -33,6 +33,14 @@ class TaskStatus(StrEnum):
     FAILED = "failed"
 
 
+class TaskKind(StrEnum):
+    PROVISION_SERVER = "provision_server"
+    START_SERVER = "start_server"
+    STOP_SERVER = "stop_server"
+    RESTART_SERVER = "restart_server"
+    DELETE_SERVER = "delete_server"
+
+
 class BackupStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"

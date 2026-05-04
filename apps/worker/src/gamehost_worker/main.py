@@ -1,6 +1,11 @@
 from typing import ClassVar
+from uuid import UUID
 
 from arq.connections import RedisSettings
+from gamehost_api.clients.node_agent import NodeAgentClient
+from gamehost_api.core.config import get_settings
+from gamehost_api.db.base import AsyncSessionFactory
+from gamehost_api.domain.lifecycle import run_task
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +19,12 @@ async def health_check(_ctx: dict[str, object]) -> str:
     return "ok"
 
 
+async def run_lifecycle_task(_ctx: dict[str, object], task_id: str) -> str:
+    async with AsyncSessionFactory() as session:
+        await run_task(session, UUID(task_id), NodeAgentClient(get_settings()))
+    return task_id
+
+
 class WorkerSettings:
-    functions: ClassVar[list[object]] = [health_check]
+    functions: ClassVar[list[object]] = [health_check, run_lifecycle_task]
     redis_settings = RedisSettings.from_dsn(Settings().redis_url)

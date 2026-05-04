@@ -5,6 +5,7 @@ from gamehost_shared.enums import (
     NodeStatus,
     ServerMemberRole,
     ServerStatus,
+    TaskKind,
     TaskStatus,
     UserRole,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "NodeStatus",
     "ServerMemberRole",
     "ServerStatus",
+    "TaskKind",
     "TaskStatus",
     "UserRole",
 ]

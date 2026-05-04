@@ -15,6 +15,7 @@ members = [
 ]
 
 [tool.uv.sources]
+gamehost-api = { workspace = true }
 gamehost-shared = { workspace = true }
 
 [dependency-groups]
