@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://gamehost:gamehost@localhost:5432/gamehost"
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret: str = Field(default="dev-only-change-me", min_length=16)
+    access_token_minutes: int = 15
+    refresh_token_days: int = 30
+    refresh_cookie_name: str = "refresh_token"
     frontend_origin: str = "https://gamehost.localhost"
 
 

@@ -1,6 +1,9 @@
 from fastapi import APIRouter
 
+from gamehost_api.api.v1.auth import router as auth_router
+
 router = APIRouter()
+router.include_router(auth_router)
 
 
 @router.get("/healthz", tags=["health"])
