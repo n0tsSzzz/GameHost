@@ -4,17 +4,32 @@ import pytest
 from gamehost_api.db.base import Base, get_session
 from gamehost_api.main import create_app
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+
+SessionFactory = async_sessionmaker[AsyncSession]
 
 
 @pytest.fixture
-async def api_client() -> AsyncIterator[AsyncClient]:
+async def test_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+    yield engine
+    await engine.dispose()
 
+
+@pytest.fixture
+def session_factory(test_engine: AsyncEngine) -> SessionFactory:
+    return async_sessionmaker(test_engine, expire_on_commit=False)
+
+
+@pytest.fixture
+async def api_client(session_factory: SessionFactory) -> AsyncIterator[AsyncClient]:
     async def override_session() -> AsyncIterator[AsyncSession]:
         async with session_factory() as session:
             yield session
@@ -24,5 +39,3 @@ async def api_client() -> AsyncIterator[AsyncClient]:
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="https://test") as client:
         yield client
-
-    await engine.dispose()
