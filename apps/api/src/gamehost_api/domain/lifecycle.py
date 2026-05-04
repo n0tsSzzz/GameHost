@@ -2,10 +2,20 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from gamehost_api.clients.node_agent import NodeAgentClientProtocol
-from gamehost_api.db.models import AuditLog, GameTemplate, Node, Server, ServerMember, Task, User
+from gamehost_api.db.models import (
+    AuditLog,
+    Backup,
+    GameTemplate,
+    Node,
+    Server,
+    ServerMember,
+    Task,
+    User,
+)
 from gamehost_api.domain.members import has_operator_access
 from gamehost_api.schemas.servers import ServerCreate, ServerUpdate
 from gamehost_shared.enums import (
+    BackupStatus,
     NodeStatus,
     ServerStatus,
     TaskKind,
@@ -161,6 +171,8 @@ async def run_task(
     try:
         if task.kind == TaskKind.PROVISION_SERVER:
             await _provision(session, task, node_agent)
+        elif task.kind in {TaskKind.BACKUP_SERVER, TaskKind.RESTORE_BACKUP}:
+            await _run_backup(session, task)
         else:
             await _run_lifecycle(session, task, node_agent)
         task.status = TaskStatus.SUCCEEDED
@@ -219,6 +231,18 @@ async def _run_lifecycle(
         TaskKind.RESTART_SERVER: ServerStatus.RUNNING,
         TaskKind.DELETE_SERVER: ServerStatus.DELETING,
     }[task.kind]
+
+
+async def _run_backup(session: AsyncSession, task: Task) -> None:
+    backup_id = task.payload.get("backupId")
+    if not isinstance(backup_id, str):
+        raise ValueError("Missing backup id")
+    backup = await session.get(Backup, UUID(backup_id))
+    if backup is None:
+        raise ValueError("Backup not found")
+    backup.status = BackupStatus.RUNNING
+    await session.flush()
+    backup.status = BackupStatus.SUCCEEDED
 
 
 async def _select_node(session: AsyncSession) -> Node:

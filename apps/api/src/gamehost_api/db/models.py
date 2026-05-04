@@ -3,6 +3,7 @@ from typing import Annotated
 from uuid import UUID
 
 from gamehost_shared.enums import (
+    BackupStatus,
     NodeStatus,
     ServerMemberRole,
     ServerStatus,
@@ -197,6 +198,28 @@ class Task(Base):
     error: Mapped[str | None] = mapped_column(Text, default=None)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class Backup(Base):
+    __tablename__ = "backups"
+
+    id: Mapped[UuidPk]
+    server_id: Mapped[UUID] = mapped_column(
+        ForeignKey("servers.id", ondelete="CASCADE"),
+        index=True,
+    )
+    s3_key: Mapped[str] = mapped_column(String(512))
+    size_bytes: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[CreatedAt]
+    status: Mapped[BackupStatus] = mapped_column(
+        SqlEnum(
+            BackupStatus,
+            name="backup_status",
+            values_callable=lambda item: [status.value for status in item],
+        ),
+        default=BackupStatus.PENDING,
+    )
 
 
 class AuditLog(Base):

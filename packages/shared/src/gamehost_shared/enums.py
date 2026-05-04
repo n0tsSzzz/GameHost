@@ -39,6 +39,8 @@ class TaskKind(StrEnum):
     STOP_SERVER = "stop_server"
     RESTART_SERVER = "restart_server"
     DELETE_SERVER = "delete_server"
+    BACKUP_SERVER = "backup_server"
+    RESTORE_BACKUP = "restore_backup"
 
 
 class BackupStatus(StrEnum):
