@@ -1,0 +1,30 @@
+- name: Install Docker
+  ansible.builtin.package:
+    name: docker.io
+    state: present
+
+- name: Create GameHost directory
+  ansible.builtin.file:
+    path: /opt/gamehost-node-agent
+    state: directory
+    mode: "0750"
+
+- name: Write node-agent environment
+  ansible.builtin.template:
+    src: node-agent.env.j2
+    dest: /opt/gamehost-node-agent/node-agent.env
+    mode: "0600"
+
+- name: Install node-agent systemd unit
+  ansible.builtin.template:
+    src: gamehost-node-agent.service.j2
+    dest: /etc/systemd/system/gamehost-node-agent.service
+    mode: "0644"
+  notify: restart node-agent
+
+- name: Enable node-agent
+  ansible.builtin.systemd:
+    name: gamehost-node-agent
+    enabled: true
+    state: started
+    daemon_reload: true

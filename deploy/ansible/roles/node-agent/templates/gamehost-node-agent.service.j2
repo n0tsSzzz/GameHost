@@ -1,0 +1,17 @@
+[Unit]
+Description=GameHost node-agent
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/opt/gamehost-node-agent/node-agent.env
+ExecStart=/usr/bin/docker run --rm --name gamehost-node-agent \
+  --env-file /opt/gamehost-node-agent/node-agent.env \
+  -p 8010:8010 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  ghcr.io/{{ gamehost_image_repository }}/node-agent:{{ gamehost_version | default('latest') }}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

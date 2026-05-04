@@ -1,3 +1,12 @@
 # Ansible
 
-Stage 10 expands this directory into a full `node-agent` role with Docker installation, systemd units, and vaulted API-key handling.
+Run with:
+
+```bash
+ansible-playbook -i inventory.ini deploy/ansible/node.yml --ask-vault-pass
+```
+
+Required vaulted variables:
+
+- `gamehost_node_agent_api_key`
+- `gamehost_image_repository`
