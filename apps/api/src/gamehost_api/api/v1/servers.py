@@ -2,15 +2,19 @@ from collections.abc import AsyncIterator
 from typing import Annotated
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from gamehost_shared.enums import TaskKind
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from gamehost_api.clients.logs import LogsClientProtocol, get_logs_client
+from gamehost_api.clients.node_agent import NodeAgentClient
+from gamehost_api.core.config import Settings, get_settings
 from gamehost_api.core.deps import CurrentUser
+from gamehost_api.core.jobs import enqueue_lifecycle_job
 from gamehost_api.db.base import get_session
-from gamehost_api.db.models import Server, Task, User
+from gamehost_api.db.models import Node, Server, Task, User
 from gamehost_api.domain.lifecycle import (
     InvalidServerState,
     ServerNotFound,
@@ -30,6 +34,7 @@ from gamehost_api.schemas.servers import (
 
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 LogsClientDep = Annotated[LogsClientProtocol, Depends(get_logs_client)]
+SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 router = APIRouter(prefix="/servers", tags=["servers"])
 
@@ -49,6 +54,7 @@ async def post_server(
     request: Request,
     session: SessionDep,
     user: CurrentUser,
+    settings: SettingsDep,
 ) -> TaskAcceptedResponse:
     try:
         server, task = await create_server(session, user, payload, _client_ip(request))
@@ -57,6 +63,7 @@ async def post_server(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Template not found",
         ) from exc
+    await enqueue_lifecycle_job(settings, task.id)
     return _accepted(task, server.id)
 
 
@@ -89,7 +96,7 @@ async def patch_server(
     except InvalidServerState as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Server must be stopped before updating config",
+            detail="Server cannot be configured while provisioning or deleting",
         ) from exc
 
 
@@ -99,11 +106,25 @@ async def get_server_logs(
     session: SessionDep,
     user: CurrentUser,
     logs_client: LogsClientDep,
+    settings: SettingsDep,
     tail: Annotated[int, Query(ge=1, le=1000)] = 200,
 ) -> dict[str, list[str]]:
     server = await _get_server_or_404(session, user, server_id)
     if server.container_id is None:
         return {"lines": []}
+    if server.node_id is not None:
+        node = await session.get(Node, server.node_id)
+        if node is not None:
+            try:
+                return {
+                    "lines": await NodeAgentClient(settings).tail_logs(
+                        node,
+                        server.container_id,
+                        tail,
+                    )
+                }
+            except httpx.HTTPError:
+                pass
     return {"lines": await logs_client.tail(server.container_id, tail)}
 
 
@@ -136,8 +157,16 @@ async def start_server(
     request: Request,
     session: SessionDep,
     user: CurrentUser,
+    settings: SettingsDep,
 ) -> TaskAcceptedResponse:
-    return await _enqueue(session, user, server_id, TaskKind.START_SERVER, _client_ip(request))
+    return await _enqueue(
+        session,
+        user,
+        server_id,
+        TaskKind.START_SERVER,
+        _client_ip(request),
+        settings,
+    )
 
 
 @router.post(
@@ -150,8 +179,16 @@ async def stop_server(
     request: Request,
     session: SessionDep,
     user: CurrentUser,
+    settings: SettingsDep,
 ) -> TaskAcceptedResponse:
-    return await _enqueue(session, user, server_id, TaskKind.STOP_SERVER, _client_ip(request))
+    return await _enqueue(
+        session,
+        user,
+        server_id,
+        TaskKind.STOP_SERVER,
+        _client_ip(request),
+        settings,
+    )
 
 
 @router.post(
@@ -164,8 +201,16 @@ async def restart_server(
     request: Request,
     session: SessionDep,
     user: CurrentUser,
+    settings: SettingsDep,
 ) -> TaskAcceptedResponse:
-    return await _enqueue(session, user, server_id, TaskKind.RESTART_SERVER, _client_ip(request))
+    return await _enqueue(
+        session,
+        user,
+        server_id,
+        TaskKind.RESTART_SERVER,
+        _client_ip(request),
+        settings,
+    )
 
 
 @router.delete(
@@ -178,8 +223,16 @@ async def delete_server(
     request: Request,
     session: SessionDep,
     user: CurrentUser,
+    settings: SettingsDep,
 ) -> TaskAcceptedResponse:
-    return await _enqueue(session, user, server_id, TaskKind.DELETE_SERVER, _client_ip(request))
+    return await _enqueue(
+        session,
+        user,
+        server_id,
+        TaskKind.DELETE_SERVER,
+        _client_ip(request),
+        settings,
+    )
 
 
 async def _enqueue(
@@ -188,6 +241,7 @@ async def _enqueue(
     server_id: UUID,
     kind: TaskKind,
     ip: str | None,
+    settings: Settings,
 ) -> TaskAcceptedResponse:
     try:
         task = await enqueue_lifecycle_task(session, user, server_id, kind, ip)
@@ -201,6 +255,7 @@ async def _enqueue(
             status_code=status.HTTP_409_CONFLICT,
             detail="Invalid server state",
         ) from exc
+    await enqueue_lifecycle_job(settings, task.id)
     return _accepted(task, server_id)
 
 

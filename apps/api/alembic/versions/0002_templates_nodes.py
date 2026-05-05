@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "0002_templates_nodes"
 down_revision: str | None = "0001_users_refresh_tokens"
@@ -17,8 +18,22 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    node_status = sa.Enum("online", "offline", "drain", name="node_status")
-    node_status.create(op.get_bind(), checkfirst=True)
+    node_status = postgresql.ENUM(
+        "online",
+        "offline",
+        "drain",
+        name="node_status",
+        create_type=False,
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          CREATE TYPE node_status AS ENUM ('online', 'offline', 'drain');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
+    )
 
     op.create_table(
         "nodes",

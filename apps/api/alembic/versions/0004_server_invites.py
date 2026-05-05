@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "0004_server_invites"
 down_revision: str | None = "0003_servers_tasks_audit"
@@ -22,7 +23,11 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), nullable=False),
         sa.Column("server_id", sa.Uuid(), nullable=False),
         sa.Column("email", sa.String(length=320), nullable=False),
-        sa.Column("role", sa.Enum("viewer", "operator", name="server_member_role"), nullable=False),
+        sa.Column(
+            "role",
+            postgresql.ENUM("viewer", "operator", name="server_member_role", create_type=False),
+            nullable=False,
+        ),
         sa.Column("token", sa.String(length=160), nullable=False),
         sa.Column("invited_by", sa.Uuid(), nullable=False),
         sa.Column("accepted_at", sa.DateTime(timezone=True), nullable=True),

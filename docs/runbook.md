@@ -5,9 +5,9 @@
 ```bash
 make install
 make up
-make migrate
-make seed
 ```
+
+`make up` runs migrations and seed data through compose one-shot services.
 
 ## Stop Local Stack
 
@@ -34,12 +34,12 @@ make migrate
 Deploy the previous image tag by setting `GAMEHOST_VERSION` and running:
 
 ```bash
-docker compose -f deploy/docker-compose.prod.yml up -d
+docker compose up -d --build
 ```
 
 ## Troubleshooting
 
-- API health: `curl https://$GAMEHOST_DOMAIN/api/v1/healthz`
+- API health: `curl http://localhost:8000/api/v1/healthz`
 - Worker jobs: inspect `tasks` rows and worker logs.
 - Node-agent: `systemctl status gamehost-node-agent`
 - Backups: verify MinIO credentials and bucket access.

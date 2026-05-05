@@ -111,7 +111,7 @@ async def update_server_config(
     server = await get_accessible_server(session, user, server_id)
     if not await has_operator_access(session, user, server):
         raise InvalidServerState
-    if server.status != ServerStatus.STOPPED:
+    if server.status in {ServerStatus.PROVISIONING, ServerStatus.DELETING}:
         raise InvalidServerState
     updates = payload.model_dump(exclude_unset=True)
     for field, value in updates.items():
@@ -182,9 +182,9 @@ async def run_task(
     except Exception as exc:
         ARQ_JOBS_FAILED.inc()
         task.status = TaskStatus.FAILED
-        task.error = str(exc)
+        task.error = str(exc) or exc.__class__.__name__
         server = await session.get(Server, task.server_id) if task.server_id else None
-        if server is not None and task.kind == TaskKind.PROVISION_SERVER:
+        if server is not None and task.kind in {TaskKind.PROVISION_SERVER, TaskKind.START_SERVER}:
             server.status = ServerStatus.FAILED
     finally:
         task.finished_at = datetime.now(UTC)
@@ -226,6 +226,9 @@ async def _run_lifecycle(
     server = await session.get(Server, task.server_id)
     if server is None or server.node_id is None:
         raise ServerNotFound
+    if task.kind == TaskKind.START_SERVER and server.container_id is None:
+        await _provision(session, task, node_agent)
+        return
     node = await session.get(Node, server.node_id)
     if node is None:
         raise NodeUnavailable

@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "0001_users_refresh_tokens"
 down_revision: str | None = None
@@ -17,8 +18,16 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    user_role = sa.Enum("user", "admin", name="user_role")
-    user_role.create(op.get_bind(), checkfirst=True)
+    user_role = postgresql.ENUM("user", "admin", name="user_role", create_type=False)
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          CREATE TYPE user_role AS ENUM ('user', 'admin');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
+    )
 
     op.create_table(
         "users",

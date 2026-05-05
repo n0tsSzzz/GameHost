@@ -16,6 +16,9 @@ class FakeNodeAgentClient(NodeAgentClientProtocol):
     async def run_lifecycle(self, node: Node, server: Server, kind: TaskKind) -> None:
         return None
 
+    async def tail_logs(self, node: Node, container_id: str, tail: int) -> list[str]:
+        return []
+
 
 async def _seed_server(session_factory: async_sessionmaker[AsyncSession]) -> UUID:
     async with session_factory() as session:

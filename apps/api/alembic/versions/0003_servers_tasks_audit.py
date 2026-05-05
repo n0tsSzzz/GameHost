@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "0003_servers_tasks_audit"
 down_revision: str | None = "0002_templates_nodes"
@@ -17,7 +18,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    server_status = sa.Enum(
+    server_status = postgresql.ENUM(
         "pending",
         "provisioning",
         "running",
@@ -25,19 +26,69 @@ def upgrade() -> None:
         "failed",
         "deleting",
         name="server_status",
+        create_type=False,
     )
-    server_member_role = sa.Enum("viewer", "operator", name="server_member_role")
-    task_kind = sa.Enum(
+    server_member_role = postgresql.ENUM(
+        "viewer",
+        "operator",
+        name="server_member_role",
+        create_type=False,
+    )
+    task_kind = postgresql.ENUM(
         "provision_server",
         "start_server",
         "stop_server",
         "restart_server",
         "delete_server",
         name="task_kind",
+        create_type=False,
     )
-    task_status = sa.Enum("queued", "running", "succeeded", "failed", name="task_status")
-    for enum in [server_status, server_member_role, task_kind, task_status]:
-        enum.create(op.get_bind(), checkfirst=True)
+    task_status = postgresql.ENUM(
+        "queued",
+        "running",
+        "succeeded",
+        "failed",
+        name="task_status",
+        create_type=False,
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          CREATE TYPE server_status AS ENUM
+            ('pending', 'provisioning', 'running', 'stopped', 'failed', 'deleting');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          CREATE TYPE server_member_role AS ENUM ('viewer', 'operator');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          CREATE TYPE task_kind AS ENUM
+            ('provision_server', 'start_server', 'stop_server', 'restart_server', 'delete_server');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          CREATE TYPE task_status AS ENUM ('queued', 'running', 'succeeded', 'failed');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
+    )
 
     op.create_table(
         "servers",

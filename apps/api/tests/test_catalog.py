@@ -91,12 +91,14 @@ async def test_nodes_are_admin_only_and_return_api_key_once(
         json={
             "name": "node-a",
             "endpointUrl": "http://node-a.internal:8010",
+            "publicHost": "node-a.example.com",
             "capacityCpu": 8,
             "capacityMemMb": 32768,
         },
     )
     assert create_response.status_code == 201
     assert create_response.json()["apiKey"]
+    assert create_response.json()["publicHost"] == "node-a.example.com"
     node_id = create_response.json()["id"]
 
     list_response = await api_client.get(

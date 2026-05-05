@@ -8,6 +8,7 @@ from gamehost_shared.schemas import CamelModel
 class NodeCreate(CamelModel):
     name: str
     endpoint_url: str
+    public_host: str = "localhost"
     capacity_cpu: int
     capacity_mem_mb: int
 
@@ -20,6 +21,7 @@ class NodeResponse(CamelModel):
     id: UUID
     name: str
     endpoint_url: str
+    public_host: str
     capacity_cpu: int
     capacity_mem_mb: int
     status: NodeStatus

@@ -1,14 +1,23 @@
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { Gamepad2, ListTree, ShieldCheck } from "lucide-react";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
-
-const items = [
-  { href: "/servers", label: "Servers", icon: Gamepad2 },
-  { href: "/admin", label: "Admin", icon: ShieldCheck },
-];
+import { apiFetch, type UserSummary } from "@/lib/api";
+import { useI18n } from "@/lib/i18n";
 
 export function AppNav() {
+  const { t } = useI18n();
+  const { data: user } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => apiFetch<UserSummary>("/auth/me"),
+    retry: false,
+  });
+  const items = [
+    { href: "/servers", label: t("servers"), icon: Gamepad2 },
+    ...(user?.role === "admin" ? [{ href: "/admin", label: t("admin"), icon: ShieldCheck }] : []),
+  ];
+
   return (
     <header className="border-b border-border">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-6">

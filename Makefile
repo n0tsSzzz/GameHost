@@ -25,10 +25,10 @@ test:
 	$(UV) run pytest
 
 up:
-	docker compose -f deploy/docker-compose.yml up -d
+	docker compose up -d --build
 
 down:
-	docker compose -f deploy/docker-compose.yml down
+	docker compose down --volumes --remove-orphans
 
 migrate:
 	$(UV) run alembic -c apps/api/alembic.ini upgrade head

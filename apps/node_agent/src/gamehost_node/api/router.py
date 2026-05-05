@@ -1,12 +1,17 @@
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sse_starlette.sse import EventSourceResponse
 
 from gamehost_node.deps import DockerOpsDep
 from gamehost_node.logs import LogPublisher, get_log_publisher
-from gamehost_node.schemas import ContainerCreateRequest, ContainerResponse, ExecRequest
+from gamehost_node.schemas import (
+    ContainerCreateRequest,
+    ContainerResponse,
+    ExecRequest,
+    LogsResponse,
+)
 from gamehost_node.security import require_api_key
 
 router = APIRouter()
@@ -54,6 +59,15 @@ async def delete_container(container_id: str, docker_ops: DockerOpsDep) -> Respo
 @protected_router.get("/containers/{container_id}", response_model=ContainerResponse)
 async def inspect_container(container_id: str, docker_ops: DockerOpsDep) -> ContainerResponse:
     return await docker_ops.inspect_container(container_id)
+
+
+@protected_router.get("/containers/{container_id}/logs", response_model=LogsResponse)
+async def tail_container_logs(
+    container_id: str,
+    docker_ops: DockerOpsDep,
+    tail: int = Query(default=200, ge=1, le=1000),
+) -> LogsResponse:
+    return LogsResponse(lines=await docker_ops.tail_logs(container_id, tail))
 
 
 @protected_router.get("/containers/{container_id}/logs/stream")

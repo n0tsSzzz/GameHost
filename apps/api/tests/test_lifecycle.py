@@ -16,6 +16,9 @@ class FakeNodeAgentClient(NodeAgentClientProtocol):
     async def run_lifecycle(self, node: Node, server: Server, kind: TaskKind) -> None:
         return None
 
+    async def tail_logs(self, node: Node, container_id: str, tail: int) -> list[str]:
+        return []
+
 
 async def _access_token(api_client: AsyncClient) -> str:
     await api_client.post(
@@ -46,6 +49,7 @@ async def _seed_template_and_node(session_factory: async_sessionmaker[AsyncSessi
             Node(
                 name="node-a",
                 endpoint_url="http://node-a.internal:8010",
+                public_host="node-a.internal",
                 api_key_hash="hash",
                 capacity_cpu=8,
                 capacity_mem_mb=32768,

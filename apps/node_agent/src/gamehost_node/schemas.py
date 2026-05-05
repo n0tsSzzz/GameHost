@@ -8,7 +8,7 @@ class ContainerCreateRequest(BaseModel):
     name: str
     image: str
     env: dict[str, str] = Field(default_factory=dict)
-    ports: dict[str, int] = Field(default_factory=dict)
+    ports: dict[str, int | None] = Field(default_factory=dict)
     volumes: dict[str, dict[str, str]] = Field(default_factory=dict)
     cpu_limit: float | None = None
     mem_limit_mb: int | None = None
@@ -19,6 +19,11 @@ class ContainerResponse(BaseModel):
     id: str
     name: str
     status: str
+    host_ports: dict[str, int] = Field(default_factory=dict)
+
+
+class LogsResponse(BaseModel):
+    lines: list[str]
 
 
 class ExecRequest(BaseModel):
@@ -45,6 +50,9 @@ class DockerOpsProtocol(Protocol):
         raise NotImplementedError
 
     def stream_logs(self, container_id: str) -> AsyncIterator[str]:
+        raise NotImplementedError
+
+    async def tail_logs(self, container_id: str, tail: int) -> list[str]:
         raise NotImplementedError
 
     async def exec_container(self, container_id: str, command: list[str]) -> str:

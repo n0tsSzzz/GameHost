@@ -9,6 +9,7 @@ from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision: str = "0005_backups"
 down_revision: str | None = "0004_server_invites"
@@ -19,8 +20,23 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.execute("ALTER TYPE task_kind ADD VALUE IF NOT EXISTS 'backup_server'")
     op.execute("ALTER TYPE task_kind ADD VALUE IF NOT EXISTS 'restore_backup'")
-    backup_status = sa.Enum("pending", "running", "succeeded", "failed", name="backup_status")
-    backup_status.create(op.get_bind(), checkfirst=True)
+    backup_status = postgresql.ENUM(
+        "pending",
+        "running",
+        "succeeded",
+        "failed",
+        name="backup_status",
+        create_type=False,
+    )
+    op.execute(
+        """
+        DO $$
+        BEGIN
+          CREATE TYPE backup_status AS ENUM ('pending', 'running', 'succeeded', 'failed');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+        """
+    )
     op.create_table(
         "backups",
         sa.Column("id", sa.Uuid(), nullable=False),

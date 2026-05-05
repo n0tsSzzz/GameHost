@@ -69,6 +69,7 @@ class Node(Base):
     id: Mapped[UuidPk]
     name: Mapped[str] = mapped_column(String(120), unique=True)
     endpoint_url: Mapped[str] = mapped_column(String(2048))
+    public_host: Mapped[str] = mapped_column(String(255), default="localhost")
     api_key_hash: Mapped[str] = mapped_column(Text)
     capacity_cpu: Mapped[int] = mapped_column(Integer)
     capacity_mem_mb: Mapped[int] = mapped_column(Integer)
